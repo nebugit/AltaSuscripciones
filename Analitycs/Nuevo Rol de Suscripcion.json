@@ -1,0 +1,77 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/80b81e25-31f6-40c8-a7f0-135b6e7d1ab8')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/80b81e25-31f6-40c8-a7f0-135b6e7d1ab8')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "Nuevo Rol de Suscripción",
+                "description": "",
+                "severity": "High",
+                "enabled": true,
+                "query": "AzureActivity \r\n| where CategoryValue =~ \"Administrative\"\r\n    and OperationNameValue =~ \"Microsoft.Authorization/roleAssignments/write\"\r\n    and (ActivityStatusValue =~ \"Start\" or ActivityStatus =~ \"Started\") \r\n| extend RoleDefinition = extractjson(\"$.Properties.RoleDefinitionId\", tostring(Properties_d.requestbody), typeof(string)) \r\n| extend PrincipalId = extractjson(\"$.Properties.PrincipalId\", tostring(Properties_d.requestbody), typeof(string)) \r\n| extend PrincipalType = extractjson(\"$.Properties.PrincipalType\", tostring(Properties_d.requestbody), typeof(string)) \r\n| extend Scope = extractjson(\"$.Properties.Scope\", tostring(Properties_d.requestbody), typeof(string)) \r\n| where Scope !contains \"resourcegroups\" \r\n| extend RoleId = split(RoleDefinition, '/')[-1] \r\n| extend RoleDisplayName = case(RoleId =~ 'b24988ac-6180-42a0-ab88-20f7382dd24c', \"Contributor\", RoleId =~ '8e3af657-a8ff-443c-a75c-2fe8c4bcb635', \"Owner\", RoleId =~ '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9', \"User Access Administrator\", \"Irrelevant\") \r\n| where RoleDisplayName != \"Irrelevant\" \r\n| project\r\n    TimeGenerated,\r\n    Scope,\r\n    PrincipalId,\r\n    PrincipalType,\r\n    RoleDisplayName,\r\n    _ResourceId,\r\n    Caller,\r\n    CallerIpAddress",
+                "queryFrequency": "PT2H",
+                "queryPeriod": "PT2H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "PrivilegeEscalation"
+                ],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Name",
+                                "columnName": "Caller"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "AzureResource",
+                        "fieldMappings": [
+                            {
+                                "identifier": "ResourceId",
+                                "columnName": "_ResourceId"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
